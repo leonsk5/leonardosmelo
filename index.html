@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfólio</title>
 
-    <!-- jsPDF CDN (fix seguro) -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
     <style>
@@ -65,16 +64,25 @@
         textarea {
             width: 100%;
             margin-bottom: 10px;
-            padding: 5px;
+            padding: 10px;
+            font-size: 16px;
         }
 
         button {
-            padding: 10px;
+            padding: 14px;
             background: #111;
             color: #fff;
             border: none;
             cursor: pointer;
             width: 100%;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                display: flex;
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -83,7 +91,7 @@
 
     <aside>
         <div class="banner">
-            <input id="nome" placeholder="Seu nome">
+            <input id="nome" placeholder="Seu nome" required>
         </div>
 
         <div class="profile-container">
@@ -93,22 +101,23 @@
 
         <section>
             <h2>Contato</h2>
-            <input id="email" placeholder="Email">
-            <input id="linkedin" placeholder="LinkedIn">
-            <input id="github" placeholder="GitHub">
+            <input id="celular" placeholder="(DDD) 99999-9999" pattern="\\(\\d{2}\\)\\s?\\d{4,5}-\\d{4}" required>
+            <input id="email" type="email" placeholder="Email" required>
+            <input id="linkedin" placeholder="LinkedIn" required>
+            <input id="github" placeholder="GitHub" required>
         </section>
 
         <section>
             <h2>Habilidades</h2>
-            <textarea id="habilidades"></textarea>
+            <textarea id="habilidades" required></textarea>
 
             <h2>Especialidades</h2>
-            <textarea id="especialidades"></textarea>
+            <textarea id="especialidades" required></textarea>
         </section>
 
         <section>
             <h2>Tecnologias</h2>
-            <textarea id="tecnologias"></textarea>
+            <textarea id="tecnologias" required></textarea>
         </section>
 
     </aside>
@@ -117,22 +126,22 @@
 
         <div class="card">
             <h2>Resumo</h2>
-            <textarea id="resumo"></textarea>
+            <textarea id="resumo" required></textarea>
         </div>
 
         <div class="card">
             <h2>Portfólio</h2>
-            <textarea id="portfolio"></textarea>
+            <textarea id="portfolio" required></textarea>
         </div>
 
         <div class="card">
             <h2>Experiência</h2>
-            <textarea id="experiencia"></textarea>
+            <textarea id="experiencia" required></textarea>
         </div>
 
         <div class="card">
             <h2>Cursos</h2>
-            <textarea id="cursos"></textarea>
+            <textarea id="cursos" required></textarea>
         </div>
 
         <button onclick="gerarPDF()">Gerar PDF</button>
@@ -147,7 +156,7 @@
             if (window.jspdf && window.jspdf.jsPDF) {
                 jsPDFInstance = window.jspdf.jsPDF;
             } else {
-                alert('Erro ao carregar jsPDF. Verifique sua conexão ou CDN.');
+                alert('Erro ao carregar jsPDF.');
             }
         });
 
@@ -158,28 +167,60 @@
             const file = this.files[0];
 
             if (file && file.type !== 'image/jpeg') {
-                alert('Apenas arquivos JPEG são permitidos.');
+                alert('Apenas JPEG permitido');
+                this.value = '';
+                return;
+            }
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Imagem muito grande (máx 2MB)');
                 this.value = '';
                 return;
             }
 
             const reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = e => {
                 imagemBase64 = e.target.result;
                 profileImage.src = imagemBase64;
             }
             reader.readAsDataURL(file);
         });
 
+        function validarCampos() {
+            const campos = document.querySelectorAll('input[required], textarea[required]');
+
+            for (let campo of campos) {
+                if (!campo.value.trim()) {
+                    alert('Preencha todos os campos obrigatórios');
+                    campo.focus();
+                    return false;
+                }
+
+                if (campo.pattern) {
+                    const regex = new RegExp(campo.pattern);
+                    if (!regex.test(campo.value)) {
+                        alert('Formato inválido em: ' + campo.id);
+                        campo.focus();
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         function gerarPDF() {
+            if (!validarCampos()) return;
+
             if (!jsPDFInstance) {
-                alert('jsPDF não carregado corretamente.');
+                alert('Erro jsPDF');
                 return;
             }
 
             const doc = new jsPDFInstance();
 
             const nome = document.getElementById('nome').value;
+            const celular = document.getElementById('celular').value;
             const email = document.getElementById('email').value;
             const linkedin = document.getElementById('linkedin').value;
             const github = document.getElementById('github').value;
@@ -195,7 +236,7 @@
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(18);
-            doc.text(nome || 'Nome não informado', 10, y);
+            doc.text(nome, 10, y);
 
             if (imagemBase64) {
                 doc.addImage(imagemBase64, 'JPEG', 150, 10, 40, 40);
@@ -210,7 +251,7 @@
                 y += 5;
                 doc.setFont('helvetica', 'normal');
 
-                const splitText = doc.splitTextToSize(content || '-', 180);
+                const splitText = doc.splitTextToSize(content, 180);
                 doc.text(splitText, 10, y);
                 y += splitText.length * 5;
 
@@ -220,7 +261,7 @@
                 }
             }
 
-            addSection('Contato', `Email: ${email}\nLinkedIn: ${linkedin}\nGitHub: ${github}`);
+            addSection('Contato', `Celular: ${celular}\nEmail: ${email}\nLinkedIn: ${linkedin}\nGitHub: ${github}`);
             addSection('Habilidades', habilidades);
             addSection('Especialidades', especialidades);
             addSection('Tecnologias', tecnologias);
