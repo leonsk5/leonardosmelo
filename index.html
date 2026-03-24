@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfólio</title>
+
+    <!-- jsPDF CDN (fix seguro) -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -84,7 +88,7 @@
 
         <div class="profile-container">
             <img id="profileImage" src="https://via.placeholder.com/120">
-            <input type="file" id="upload">
+            <input type="file" id="upload" accept="image/jpeg">
         </div>
 
         <section>
@@ -131,57 +135,101 @@
             <textarea id="cursos"></textarea>
         </div>
 
-        <button onclick="salvarTXT()">Salvar em TXT</button>
+        <button onclick="gerarPDF()">Gerar PDF</button>
 
     </main>
 
     <script>
+        let jsPDFInstance = null;
+        let imagemBase64 = null;
+
+        window.addEventListener('load', () => {
+            if (window.jspdf && window.jspdf.jsPDF) {
+                jsPDFInstance = window.jspdf.jsPDF;
+            } else {
+                alert('Erro ao carregar jsPDF. Verifique sua conexão ou CDN.');
+            }
+        });
+
         const upload = document.getElementById('upload');
         const profileImage = document.getElementById('profileImage');
 
         upload.addEventListener('change', function () {
             const file = this.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = e => profileImage.src = e.target.result;
-                reader.readAsDataURL(file);
+
+            if (file && file.type !== 'image/jpeg') {
+                alert('Apenas arquivos JPEG são permitidos.');
+                this.value = '';
+                return;
             }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                imagemBase64 = e.target.result;
+                profileImage.src = imagemBase64;
+            }
+            reader.readAsDataURL(file);
         });
 
-        function salvarTXT() {
-            const dados = `
-Nome: ${document.getElementById('nome').value}
-Email: ${document.getElementById('email').value}
-LinkedIn: ${document.getElementById('linkedin').value}
-GitHub: ${document.getElementById('github').value}
+        function gerarPDF() {
+            if (!jsPDFInstance) {
+                alert('jsPDF não carregado corretamente.');
+                return;
+            }
 
-Habilidades:
-${document.getElementById('habilidades').value}
+            const doc = new jsPDFInstance();
 
-Especialidades:
-${document.getElementById('especialidades').value}
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const linkedin = document.getElementById('linkedin').value;
+            const github = document.getElementById('github').value;
+            const habilidades = document.getElementById('habilidades').value;
+            const especialidades = document.getElementById('especialidades').value;
+            const tecnologias = document.getElementById('tecnologias').value;
+            const resumo = document.getElementById('resumo').value;
+            const portfolio = document.getElementById('portfolio').value;
+            const experiencia = document.getElementById('experiencia').value;
+            const cursos = document.getElementById('cursos').value;
 
-Tecnologias:
-${document.getElementById('tecnologias').value}
+            let y = 10;
 
-Resumo:
-${document.getElementById('resumo').value}
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text(nome || 'Nome não informado', 10, y);
 
-Portfólio:
-${document.getElementById('portfolio').value}
+            if (imagemBase64) {
+                doc.addImage(imagemBase64, 'JPEG', 150, 10, 40, 40);
+            }
 
-Experiência:
-${document.getElementById('experiencia').value}
+            y += 15;
 
-Cursos:
-${document.getElementById('cursos').value}
-`;
+            function addSection(title, content) {
+                y += 10;
+                doc.setFont('helvetica', 'bold');
+                doc.text(title, 10, y);
+                y += 5;
+                doc.setFont('helvetica', 'normal');
 
-            const blob = new Blob([dados], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'portfolio.txt';
-            link.click();
+                const splitText = doc.splitTextToSize(content || '-', 180);
+                doc.text(splitText, 10, y);
+                y += splitText.length * 5;
+
+                if (y > 270) {
+                    doc.addPage();
+                    y = 10;
+                }
+            }
+
+            addSection('Contato', `Email: ${email}\nLinkedIn: ${linkedin}\nGitHub: ${github}`);
+            addSection('Habilidades', habilidades);
+            addSection('Especialidades', especialidades);
+            addSection('Tecnologias', tecnologias);
+            addSection('Resumo', resumo);
+            addSection('Portfólio', portfolio);
+            addSection('Experiência', experiencia);
+            addSection('Cursos', cursos);
+
+            doc.save('portfolio.pdf');
         }
     </script>
 
